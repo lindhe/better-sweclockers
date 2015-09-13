@@ -1,6 +1,6 @@
 [size="5"][b]Dokumentation för Better SweClockers[/b][/size]
 
-[b]Uppdaterad:[/b] 2015-05-13
+[b]Uppdaterad:[/b] 2015-09-13
 Denna dokumentation beskriver hur man installerar och använder Better SweClockers.
 
 [size="3"][color="#D00"]»[/color] [url="#post14497835"][b]Hoppa förbi dokumentationen[/b][/url][/size]
@@ -60,11 +60,11 @@ En av huvudfunktionerna i Better SweClockers är den avancerade kontrollpanelen
 
 I exemplen nedan används ett [b]blått lodstreck[/b] [color="#24F"]|[/color] för att markera var markören hamnar eller [b]blå text[/b] för den text som är [color="#24F"]markerad[/color] nu. [color="#20A000"]Grön text[/color] är skriven av användaren. Strängen [cmd]markerad text[/cmd] ska tolkas som den text som var markerad innan funktionen aktiverades.
 
-[size="3"][b]size, color och font[/b][/size]
+[size="3"][b]size, color, font och quote[/b][/size]
 
-Knapparna size, color och font är genvägar till BB-koderna med samma namn, så att man slipper skriva dem själv. Klicka till exempel på knappen [b]size[/b], så omges markerad text med [cmd]size[/cmd]-taggen.
+Knapparna size, color, font och quote är genvägar till BB-koderna med samma namn, så att man slipper skriva dem själv. Klicka till exempel på knappen [b]size[/b], så omges markerad text med [cmd]size[/cmd]-taggen, inklusive [cmd]=""[/cmd].
 [code][noparse][size="[/noparse][color="#24F"]|[/color][noparse]"]markerad text[/size][/noparse][/code]
-[b]color[/b] och [b]font[/b] fungerar precis likadant.
+[b]color[/b], [b]font[/b] och [b]quote[/b] fungerar precis likadant.
 
 
 
@@ -502,6 +502,12 @@ Denna funktion lägger in en knapp i varje inlägg som är en genväg till att c
 
 
 
+[size="3"][b]2.3.8  Ta bort [cmd]#content[/cmd]-ankare i länkar till andra sidor i en artikel[/b][/size]
+
+Denna funktion tar bort [cmd]#content[/cmd]-ankaret i varje länk till andra sidor längst ner i en artikel, exempelvis [i]Slutsats och sammanfattning[/i]. Det innebär att webbläsaren, när man klickar på en sådan länk, inte automatiskt hoppar ner till början av brödtexten på den sidan. Framförallt innebär det att webbläsaren ej heller hoppar [i]upp[/i] till början av brödtexten efter att man redan börjat scrolla. Särskilt användbart på långsamma enheter och sega uppkopplingar.
+
+
+
 
 [size="4"][color="#24F"]▶[/color] [b]2.4  Forumfilter[/b][/size]
 
@@ -726,6 +732,12 @@ Se 2.3.6.
 [size="3"][b]Citera signatur-knappar i foruminlägg[/b][/size]
 
 Se 2.3.7.
+
+
+
+[size="3"][b]Ta bort [cmd]#content[/cmd]-ankare i länkar till andra sidor i en artikel[/b][/size]
+
+Se 2.3.8.
 
 
 

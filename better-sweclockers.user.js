@@ -3,7 +3,7 @@
 // @namespace       http://alling.se
 //
 //                  *** Don't forget to update version below as well! ***
-// @version         2.0.6
+// @version         2.1
 //                  *** Don't forget to update version below as well! ***
 //
 // @match           http://*.sweclockers.com/*
@@ -25,7 +25,7 @@ var Better_SweClockers = (function() {
 "use strict";
 
 // Needed for update check. Remember to update!
-var version = "2.0.6";
+var version = "2.1";
 
 // "Constants"
 var ABOVE_STANDARD_CONTROL_PANEL = 0;
@@ -92,6 +92,7 @@ var BSC = {
     shibeTextLineMaxLength: 100, // max line length of shibe text
     bannerHeightTop: 121, // default height of top ad banner
     bannerHeightSide: 360, // default height of side ad banners
+    favoriteLinksHeight: 32,
 
     myName: "", // user's username
     CSS: "", // will contain all BSC CSS
@@ -147,6 +148,7 @@ var BSC = {
         "preventAccidentalSignout":             true,
         "removeLastNewline":                    true,
         "removeMobileSiteDisclaimer":           true,
+        "removePageLinkAnchors":                false,
         "searchWithGoogle":                     true,
         "quoteSignatureButtons":                false,
         "quoteSignatureTip":                    quoteSignatureTipDefault,
@@ -206,7 +208,8 @@ var BSC = {
             ["Better\xA0SweClockers' dokumentation", "/forum/trad/1288777-better-sweclockers#post14497818"],
             ["Blargmodes mörka tema", "/forum/trad/1089561-ett-morkt-tema-till-sweclockers"],
             ["Dagens fynd", "/forum/trad/999559-dagens-fynd-bara-tips-ingen-diskussion-las-forsta-inlagget-forst"],
-            ["Marknadsreferenser", "/forum/trad/1079311-sweclockers-marknadsreferenser-las-forsta-inlagget-innan-du-postar"]
+            ["Marknadsreferenser", "/forum/trad/1079311-sweclockers-marknadsreferenser-las-forsta-inlagget-innan-du-postar"],
+            ["SweClockers BB-kod", "/forum/trad/1367916-faq-sweclockers-bb-kod"]
         ],
         ["Mjukvara",
             ["Core Temp", "http://www.alcpu.com/CoreTemp"],
@@ -423,7 +426,7 @@ function isNonEmptyString(s) {
 
 function isVersionNumber(s) {
     // Returns true if s is a string consisting of dot-separated integers
-    return isString(s) && !!s.match(/^(\d+\.)*\d+$/);
+    return isString(s) && /^(\d+\.)*\d+$/.test(s);
 }
 
 function byID(i) {
@@ -487,8 +490,14 @@ function eventListener(id, eventName, func) {
     }
 }
 
+function randomInt(min, max) {
+    // Return an int between min (inclusive) and max (exlusive)
+    return Math.floor(Math.random() * (max - min)) + min;
+}
+
 function randomIntUpTo(max) {
-    return Math.ceil(Math.random() * max);
+    // Return an int between 0 (inclusive) and max (exclusive)
+    return randomInt(0, max);
 }
 
 // Time
@@ -525,7 +534,7 @@ function timeIsBetween(t, start, end) {
 }
 
 function isHHMMTime(s) {
-    return isNonEmptyString(s) && !!s.match(/^\d{2}:\d{2}/);
+    return isNonEmptyString(s) && /^\d{2}:\d{2}/.test(s);
 }
 
 function parseHours(s) {
@@ -587,6 +596,12 @@ function scrollToElementWithID(id) {
 function getURLAnchor() {
     var parts = document.location.href.split("#");
     return parts.length > 1 ? parts[1] : null;
+}
+
+function removeAnchor(link) {
+    if (link instanceof HTMLAnchorElement) {
+        link.href = link.href.replace(/#.*$/, "");
+    }
 }
 
 function createLink(text, href, title) {
@@ -827,14 +842,12 @@ function logExceptions() {
         log("***********************************************");
         log("******** Better SweClockers Exceptions ********");
         log("***********************************************");
-        for (var i = 0, l = es.length; i < l; i++) {
-            logException(es[i]);
-        }
+        es.forEach(logException);
     }
 }
 
 function isLoggedIn() {
-    return !byID("btnSignin");
+    return byID("signoutForm");
 }
 
 function isInThread() {
@@ -879,7 +892,7 @@ function isOnSettingsPage() {
 }
 
 function isOnBSCSettingsPage() {
-    return matches(document.location.pathname, /^\/profil\/better\-sweclockers/i);
+    return matches(document.location.pathname, /^\/better\-sweclockers/i);
 }
 
 function isInNewPMMode() {
@@ -949,17 +962,15 @@ function loadSettings() {
         log("Loaded default settings.");
     } else {
         log("Loading saved settings...");
-        for (var option in defaultSettings) {
-            if (defaultSettings.hasOwnProperty(option)) {
-                if (savedSettings.hasOwnProperty(option)) {
+        Object.keys(defaultSettings).forEach(function(option) {
+            if (savedSettings.hasOwnProperty(option)) {
                     loadedSettings[option] = savedSettings[option];
                     log("Loaded setting \"" + option + "\" with value " + savedSettings[option] + ".");
                 } else {
                     loadedSettings[option] = defaultSettings[option];
                     addWarning("There was no saved value for setting \"" + option + "\". Loaded default value " + defaultSettings[option] + ".");
                 }
-            }
-        }
+        });
         log("Done loading settings.");
     }
     BSC.settings = loadedSettings;
@@ -993,12 +1004,10 @@ function saveState() {
 function loadState() {
     log("Loading saved state...");
     var savedState = JSON.parse(LSGet("savedState"));
-    for (var st in savedState) {
-        if (savedState.hasOwnProperty(st)) {
-            BSC.setState(st, savedState[st]);
-            log("Loaded state "+st+" with value "+savedState[st]+".");
-        }
-    }
+    Object.keys(savedState).forEach(function(st) {
+        BSC.setState(st, savedState[st]);
+        log("Loaded state "+st+" with value "+savedState[st]+".");
+    });
 }
 
 function bsSelectOptionsUsefulLinks(arr) {
@@ -1103,7 +1112,7 @@ function splitQuote() {
     TA.BSC_trimAtCursor();
     var beforeSelection = TA.BSC_getTextBeforeSelection();
     var afterSelection  = TA.BSC_getTextAfterSelection();
-    if (!!beforeSelection.match(/\[\/quote\]$/i) && !!afterSelection.match(/^\[quote(=(".+"|.+))?\]/i)) {
+    if (/\[\/quote\]$/i.test(beforeSelection) && /^\[quote(=(".+"|.+))?\]/i.test(afterSelection)) {
         // Cursor is between two already existing quotes, so just insert empty lines and place the cursor accordingly:
         TA.BSC_insert("\n\n\n\n", 1);
     } else {
@@ -1127,7 +1136,7 @@ function betterSwecColorButtons() {
         colors = BSC.defaultSettings.colors;
     }
     for (var i = 0; i < colors.length; i++) {
-        html += '<div title="' + colors[i] + '" style="background-color: ' + colors[i] + ';" class="betterSwecColorButton"></div>';
+        html += '<div title="' + colors[i] + '" style="background-color: ' + colors[i] + ';" class="Better_SweClockers_ColorButton"></div>';
     }
     return html;
 }
@@ -1142,7 +1151,7 @@ function setInitialTextareaHeight() {
 function setLargerTextarea(larger) {
     log("Setting textarea size to " + (larger ? BSC.settings.largerTextareaHeight : BSC.settings.textareaHeight) + "px...");
     var TA     = BSC.TA;
-    var button = byID("betterSwecButtonLargerTextarea");
+    var button = byID("Better_SweClockers_Button_LargerTextarea");
     if (!!TA && !!button) {
         if (larger) {
             TA.style.height = BSC.settings.largerTextareaHeight+"px";
@@ -1182,10 +1191,12 @@ function getMyName() {
             addException(new ElementNotFoundException("Could not extract username because its presumed parent (.profile .name a) could not be found or did not contain expected content."));
             return null;
         }
+    } else if (isOnBSCSettingsPage()) {
+        log("No need to extract username because currently on BSC settings page.");
     } else {
         addWarning("Could not extract username because not logged in.");
-        return null;
     }
+    return null;
 }
 
 function getTAForm() {
@@ -1220,7 +1231,7 @@ function insertButtonsBelowTA() {
             if (!!lastDefaultButton) { 
                 var container = document.createElement("span");
                 container.id = "Better_SweClockers_ButtonsBelowTA";
-                var largerTextareaButton = createBelowTAButton(BSC.getState("largerTextareaActive") ? BSC.content.smallerTextarea : BSC.content.largerTextarea,   "betterSwecButtonLargerTextarea",     toggleLargerTextarea);
+                var largerTextareaButton = createBelowTAButton(BSC.getState("largerTextareaActive") ? BSC.content.smallerTextarea : BSC.content.largerTextarea,   "Better_SweClockers_Button_LargerTextarea",     toggleLargerTextarea);
                 container.appendChild(largerTextareaButton);
                 container.BSC_insertAfter(lastDefaultButton);
                 log("Inserted buttons below textarea.");
@@ -1294,6 +1305,7 @@ function favoriteLinksElement() {
     elementHTML += '<option data-url="' + BSC.settingsURLFavoriteLinks + '">Redigera favoritlänkar</option>';
     element.innerHTML = elementHTML;
     element.id = "Better_SweClockers_FavoriteLinks";
+    element.addEventListener("change", goToSelectedFavoriteLink);
     return element;
 }
 
@@ -1312,28 +1324,30 @@ function goToSelectedFavoriteLink() {
     }
 }
 
-function fixTabWidthForFavoriteLinks() {
-    BSC.addCSS(".subMenu li a { padding-left: 10px; padding-right: 10px; }");
+function makeRoomForFavoriteLinks() {
+    BSC.addCSS("\
+        .fixed > .inner { position: relative; }\
+        #wdgtSideRecentThreads { margin-top: "+BSC.favoriteLinksHeight+"px; }\
+    ");
 }
 
 function canInsertFavoriteLinks() {
-    return qSel(".sections .section.profile") instanceof HTMLDivElement;
+    return byID("wdgtSideRecentThreads") instanceof HTMLDivElement;
 }
 
 function insertFavoriteLinks() {
     log("Inserting Favorite Links dropdown box...");
     if (isLoggedIn() && !byID("Better_SweClockers_FavoriteLinks")) {
-        var sectionProfile = qSel(".sections .section.profile");
-        if (sectionProfile instanceof HTMLDivElement) {
+        var wdgtSideRecentThreads = byID("wdgtSideRecentThreads");
+        if (wdgtSideRecentThreads instanceof HTMLDivElement) {
             try {
                 var FLElement = favoriteLinksElement();
-                sectionProfile.appendChild(FLElement);
-                FLElement.addEventListener("change", goToSelectedFavoriteLink);
+                FLElement.BSC_insertBefore(wdgtSideRecentThreads);
                 log("Inserted Favorite Links dropdown box.");
             } catch (e) {
                 addException(new ContentCreationException("Could not insert Favorite Links dropdown box because something went wrong when creating it: " + e.message));
             }
-        } else addException(new ElementNotFoundException("Could not insert Favorite Links dropdown box because its intended parent (.sections .section.profile) could not be found."));
+        } else addException(new ElementNotFoundException("Could not insert Favorite Links dropdown box because its intended nextSibling (#wdgtSideRecentThreads) could not be found."));
     }
 }
 
@@ -1590,7 +1604,7 @@ function handleDarkThemeTimer() {
 
 function checkForBetterSweClockersAnchor() {
     var anchor = getURLAnchor();
-    if (!!anchor && !!anchor.match(/^Better_SweClockers/)) {
+    if (!!anchor && /^Better_SweClockers/.test(anchor)) {
         scrollToElementWithID(anchor);
     }
 }
@@ -1756,8 +1770,9 @@ function insertAdvancedControlPanel() {
     var ACPHTML = "";
     // Text formatting, URL, IMG, Google search
     ACPHTML += '<input value="size" id="Better_SweClockers_Button_Size" class="button" type="button" />' +
-        '<input value="color" id="betterSwecButtonColor" class="button" type="button" />' +
+        '<input value="color" id="Better_SweClockers_Button_Color" class="button" type="button" />' +
         '<input value="font" id="Better_SweClockers_Button_Font" class="button" type="button" />' +
+        '<input value="quote" id="Better_SweClockers_Button_Quote" class="button" type="button" />' +
         '<input value="noparse" title="Förhindrar att BB-kod parsas" id="Better_SweClockers_Button_Noparse" class="button" type="button" />' +
         '<input value="strike" title="Överstruken text" id="Better_SweClockers_Button_Strike" class="button" type="button" />' +
         '<input value="cmd" title="Inlinekod" id="Better_SweClockers_Button_Cmd" class="button" type="button" />' +
@@ -1769,7 +1784,7 @@ function insertAdvancedControlPanel() {
         '<a title="Länk till Google-sökning med markerad text som sökfras" id="Better_SweClockers_Button_Google" class="button" href="#" /><span>G</span><span>o</span><span>o</span><span>g</span><span>l</span><span>e</span></a>';
     // Doge buttons
     if (optionIsTrue("ACP_dogeButtons")) {
-        ACPHTML += '<input value="shibe" title="wow" id="Better_SweClockers_Button_Shibe" class="button betterSwecShibeText" type="button" />' +
+        ACPHTML += '<input value="shibe" title="wow" id="Better_SweClockers_Button_Shibe" class="button Better_SweClockers_ShibeText" type="button" />' +
                    '<a title="pls click" id="Better_SweClockers_Button_Doge" class="button Better_SweClockers_IconButton" href="#"><img src="' + BASE64.DOGE + '" />Doge</a>';
     }
     // Smileys
@@ -1816,18 +1831,18 @@ function insertAdvancedControlPanel() {
     // Prisjakt, Imgur
     if (optionIsTrue("ACP_quickLinks")) {
         ACPHTML += '\
-            <a title="Öppna Prisjakt i en ny flik" id="betterSwecButtonPrisjakt" href="http://www.prisjakt.nu/kategori.php?k=328" class="button Better_SweClockers_IconButton" target="_blank"><img src="' + BASE64.PRISJAKT + '" />Prisjakt</a>\
-            <a title="Öppna Imgur i en ny flik" id="betterSwecButtonImgur" href="http://imgur.com" class="button Better_SweClockers_IconButton" target="_blank"><img src="' + BASE64.IMGUR + '" />Imgur</a>\
+            <a title="Öppna Prisjakt i en ny flik" id="Better_SweClockers_Button_Prisjakt" href="http://www.prisjakt.nu/kategori.php?k=328" class="button Better_SweClockers_IconButton" target="_blank"><img src="' + BASE64.PRISJAKT + '" />Prisjakt</a>\
+            <a title="Öppna Imgur i en ny flik" id="Better_SweClockers_Button_Imgur" href="http://imgur.com" class="button Better_SweClockers_IconButton" target="_blank"><img src="' + BASE64.IMGUR + '" />Imgur</a>\
         ';
     }
     // Inställningar
     ACPHTML += '\
-        <a title="Inställningar (öppnas i en ny flik)" target="_blank" id="betterSwecButtonSettings" class="button Better_SweClockers_IconButton" href="' + BSC.settingsURL + '"><img src="' + BASE64.SETTINGS + '" />Inst.</a>\
+        <a title="Inställningar (öppnas i en ny flik)" target="_blank" id="Better_SweClockers_Button_Settings" class="button Better_SweClockers_IconButton" href="' + BSC.settingsURL + '"><img src="' + BASE64.SETTINGS + '" />Inst.</a>\
     ';
     // Färgpaletten
     if (optionIsTrue("ACP_colorPalette")) {
         ACPHTML += '\
-            <br /><form id="betterSwecColorPalette"><fieldset title="Färgar texten i vald färg, precis som [color] (snabbgenvägar för vanliga färger)">\
+            <br /><form><fieldset title="Färgar texten i vald färg, precis som [color] (snabbgenvägar för vanliga färger)">\
                 <legend>Färgpaletten</legend>\
                 <input value="+ Färgpaletten" id="Better_SweClockers_Button_ColorPalette" class="button" type="button" /><div id="Better_SweClockers_ColorPaletteInner" style="display: ' + (BSC.getState("showColorPalette") ? "inline-block" : "none") + ';">' +
               betterSwecColorButtons() +
@@ -1865,10 +1880,12 @@ function insertAdvancedControlPanel() {
         switch (realTargetID) {
             case "Better_SweClockers_Button_Size":
                 TA.BSC_wrapBB('[size=""]', '[/size]', 7); break;
-            case "betterSwecButtonColor":
+            case "Better_SweClockers_Button_Color":
                 TA.BSC_wrapBB('[color=""]', '[/color]', 8); break;
             case "Better_SweClockers_Button_Font":
                 TA.BSC_wrapBB('[font=""]', '[/font]', 7); break;
+            case "Better_SweClockers_Button_Quote":
+                TA.BSC_wrapBB('[quote=""]', '[/quote]', 8); break;
             case "Better_SweClockers_Button_URL":
                 TA.BSC_wrapBB('[url=""]', '[/url]', 6); break;
             case "Better_SweClockers_Button_IMG":
@@ -1982,6 +1999,22 @@ function improvePaginationButtons() {
     ';
 }
 
+function canRemovePageLinkAnchors() {
+    return !!qSel(".articleNavi .pageList");
+}
+
+function removePageLinkAnchors() {
+    log("Removing page link anchors ...");
+    var pageList = qSel(".articleNavi .pageList");
+    if (!!pageList) {
+        var pageLinks = pageList.querySelectorAll("a");
+        for (var i = 0, len = pageLinks.length; i < len; i++) {
+            removeAnchor(pageLinks[i]);
+        }
+    } else addException(new ElementNotFoundException("Could not remove page link anchors because the page list element (.articleNavi .pageList) could not be found."));
+    log("Done removing page link anchors.");
+}
+
 function extractUsernameFromPost(post) {
     try {
         var authLink = post.querySelector(".name a");
@@ -2024,7 +2057,14 @@ function addPMLinks() {
             }
         } else err(forumPost.id);
     }
-    BSC.CSS += ".forumPost .details .Better_SweClockers_IconButton { margin: 0 0 -20px 8px; }";
+    // We have to position the PM button absolutely so it does not cause
+    // minor page jumping on some devices (e.g. iOS 7). Therefore, we also
+    // have to position .details non-statically, so our absolute positioning
+    // works.
+    BSC.CSS += "\
+        .forumPost .details .Better_SweClockers_IconButton { position: absolute; margin-left: 8px; }\
+        .forumPost .details { position: relative; }\
+    ";
     log("Done inserting PM links.");
 }
 
@@ -2067,8 +2107,13 @@ function quoteSignatureForm(signatureText, postid, author, tip) {
 function addQuoteSignatureButtons() {
     log("Inserting quote signature buttons...");
     try {
-        // We add an overkill margin-left to force the button to stay on the same line even when the container is too narrow, such as on tablets:
-        BSC.addCSS(".Better_SweClockers_QuoteSignatureButton { height: 24px; margin-left: -200px; }");
+        // We add an overkill margin-left to force the button to stay on
+        // the same line even when the container is too narrow, such as
+        // on tablets. float: right; is needed so that the button is
+        // "glued" to the buttons on its right:
+        BSC.addCSS("\
+            .Better_SweClockers_QuoteSignatureButton { height: 24px !important; box-sizing: border-box !important; border-radius: 0; margin-left: -1000px !important; float: right !important; }\
+        ");
         var forumPosts = BSC.forumPosts;
         var forumPost, postid, author, signature, controls, fakeForm;
         for (var i = 0, len = forumPosts.length; i < len; i++) {
@@ -2081,7 +2126,7 @@ function addQuoteSignatureButtons() {
                     controls = forumPost.querySelector(".cell.controls");
                     fakeForm = quoteSignatureForm(signature.textContent.trim(), postid, author, BSC.settings.quoteSignatureTip);
                     controls.appendChild(fakeForm);
-                } else addWarning("Did not insert quote signature button under post "+postid+" because no signature was found.");
+                } else log("Did not insert quote signature button under post "+postid+" because no signature was found.");
             }
         }
         log("Inserted quote signature buttons.");
@@ -2181,24 +2226,16 @@ function addMainCSS() {
             position: relative; /* for absolute positioning of Favorite Links */\
         }\
         #Better_SweClockers_FavoriteLinks {\
-            height: 24px;\
-            left: 48px;\
+            height: '+BSC.favoriteLinksHeight+'px;\
             position: absolute;\
-            top: 67px;\
-            width: 172px;\
+            margin: 0;\
+            top: -'+(BSC.favoriteLinksHeight+5)+'px;\
         }\
-        #Better_SweClockers_FavoriteLinks:link,\
-        #Better_SweClockers_FavoriteLinks:visited,\
-        #Better_SweClockers_FavoriteLinks:hover,\
-        #Better_SweClockers_FavoriteLinks:active,\
-        #Better_SweClockers_FavoriteLinks:focus {\
-            text-decoration: none;\
-        }\
-        body a.betterSwecLink:link, body a.betterSwecLink:visited {\
+        body a.Better_SweClockers_Link:link, body a.Better_SweClockers_Link:visited {\
             color: #D26000;\
             text-decoration: none;\
         }\
-        body a.betterSwecLink:hover, body a.betterSwecLink:focus, body a.betterSwecLink:active {\
+        body a.Better_SweClockers_Link:hover, body a.Better_SweClockers_Link:focus, body a.Better_SweClockers_Link:active {\
             text-decoration: underline;\
         }\
         .forumForm.postEditForm .s5fieldset .tanukiTextbox { max-width: 100%; }\
@@ -2220,8 +2257,6 @@ function addMainCSS() {
         #Better_SweClockers_ACP form { margin: 0; padding: 0; }\
         #Better_SweClockers_ACP label { cursor: pointer; display: inline; font-size: 12px; margin: 0; padding: 0 0 0 2px; }\
         #Better_SweClockers_ACP input[type=checkbox] { cursor: pointer; }\
-        .betterSwecImageButton { opacity: 0.7; vertical-align: middle; }\
-        .betterSwecImageButton:hover { opacity: 1; vertical-align: middle; }\
         #Better_SweClockers_Button_Strike { text-decoration: line-through; }\
         #Better_SweClockers_Button_Cmd,\
         #Better_SweClockers_Button_Code {\
@@ -2232,7 +2267,7 @@ function addMainCSS() {
         .Better_SweClockers_IconButton img { position: absolute; top: 2px; left: 4px; height: 16px; }\
         .Better_SweClockers_IconButton img.Better_SweClockers_IconButtonIcon20px { top: 0; left: 2px; height: 20px; }\
         #Better_SweClockers_ACP #Better_SweClockers_Button_ColorPalette { margin-right: 0; width: 96px; }\
-        #Better_SweClockers_ACP div.betterSwecColorButton {\
+        #Better_SweClockers_ACP div.Better_SweClockers_ColorButton {\
             background: none;\
             border: none;\
             -moz-box-sizing: border-box;\
@@ -2243,8 +2278,8 @@ function addMainCSS() {
             position: relative;\
             width: 23px;\
         }\
-        #Better_SweClockers_ACP div.betterSwecColorButton:hover,\
-        #Better_SweClockers_ACP div.betterSwecColorButton:active {\
+        #Better_SweClockers_ACP div.Better_SweClockers_ColorButton:hover,\
+        #Better_SweClockers_ACP div.Better_SweClockers_ColorButton:active {\
             /*outline: 2px rgba(0, 0, 0, 0.8) solid;*/\
             border-radius: 3px;\
             cursor: pointer;\
@@ -2280,7 +2315,7 @@ function addMainCSS() {
         #Better_SweClockers_Button_Google span:nth-child(3) { color: #eeb003; }\
         #Better_SweClockers_Button_Google span:nth-child(5) { color: #009957; }\
         #Better_SweClockers_UsefulLinksSelect { width: 128px; }\
-        .betterSwecShibeText { color: red; font-family: "Comic Sans MS", "Chalkboard SE", sans-serif; font-style: italic; }\
+        .Better_SweClockers_ShibeText { color: red; font-family: "Comic Sans MS", "Chalkboard SE", sans-serif; font-style: italic; }\
         #Better_SweClockers_ButtonsBelowTA { float: right; margin-right: 20px; }\
         ' +
         
@@ -2302,6 +2337,11 @@ function addMainCSS() {
         #Better_SweClockers textarea { min-height: 128px; }\
         #Better_SweClockers_Settings_ImportExportStatus { height: 1em; margin: 12px 0 0 0; }\
         #Better_SweClockers_Settings_ImportExportInfo { margin: 12px 0; }\
+        #Better_SweClockers_Settings_SuccessReport { height: 20px; }\
+    ' +
+
+
+    '\
         .Better_SweClockers_Uninteresting { opacity: 0.3 !important; }\
         .pushListInternal #Better_SweClockers_FilterSettingsExpandLink {\
             font-size: 12px;\
@@ -2353,6 +2393,7 @@ function insertDarkThemeStyleElement() {
 
 function insertStyleElement() {
     BSC.styleElement.innerHTML = BSC.CSS;
+    BSC.styleElement.id = "Better_SweClockers_Style";
     document.head.appendChild(BSC.styleElement);
 }
 
@@ -2482,14 +2523,33 @@ function insertOptionsForm() {
         } else throw new ContentCreationException("Could not create settings checkbox for option " + optionName + " because the generator function was called with invalid arguments (" + optionName + " and " + labelText + ").");
     }
     function keysWithTrueValue(obj) {
-        var keys = [];
-        for (var key in obj) {
-            if (obj.hasOwnProperty(key) && obj[key] === true) {
-                keys.push(key);
+        var trueKeys = [];
+        Object.keys(obj).forEach(function(key) {
+            if (obj[key] === true) {
+                trueKeys.push(key);
             }
-        }
-        return keys;
+        })
+        return trueKeys;
     }
+    function hideSuccessReport() {
+        byID("Better_SweClockers_Settings_SuccessReport").style.visibility = "hidden";
+    }
+    function handleSaveRequest() {
+        BSC.settings = parseOptionsForm();
+        saveSettings();
+        loadFavoriteLinks(parseFavoriteLinks(BSC.settings.favoriteLinksRaw));
+        var successReport = byID("Better_SweClockers_Settings_SuccessReport");
+        if (successReport instanceof HTMLDivElement) {
+            successReport.style.visibility = "visible";
+            successReport.innerHTML = "Inställningarna sparades."
+            setTimeout(hideSuccessReport, 2000);
+        }
+    }
+    function saveSettingsError(ex) {
+        addException(ex);
+        alert("Ett fel inträffade när inställningarna skulle sparas.\n\n"+ex.message);
+    }
+    var referrer = document.referrer || "/";
     document.title = "Inställningar för Better SweClockers";
     document.head.appendChild((function() { var link = document.createElement("link"); link.rel="stylesheet"; link.href=BSC.defaultStylesheetURL; return link; })());
     if (!byID("Better_SweClockers")) {
@@ -2505,7 +2565,7 @@ function insertOptionsForm() {
                         <img src="' + BSC.logoURL + '" class="logo" alt="Better SweClockers" />\
                         <p>Dessa inställningar sparas endast lokalt.</p>\
                         <p><a href="' + BSC.documentationURL + '"><strong>Dokumentation/hjälp</strong></a></p>\
-                        <p><a href="/profil/installningar"><strong>Tillbaka till SweClockers</strong></a></p>' +
+                        <p><a href="' + referrer + '"><strong>Tillbaka till SweClockers</strong></a></p>' +
                         subFieldset("Advanced Control Panel (ACP)",
                             checkboxList(
                                 settingsCheckbox("advancedControlPanel", "<strong>Aktivera Advanced Control Panel</strong>")
@@ -2516,7 +2576,7 @@ function insertOptionsForm() {
                                 '<option'+(ACPInsertionPoint === ABOVE_TA ? " selected":"")+'>Under standardkontrollpanelen</option>' +
                                 '<option'+(ACPInsertionPoint === BELOW_TA ? " selected":"")+'>Under textrutan (standard)</option></select>' +
                             checkboxList(
-                                settingsCheckbox("ACP_dogeButtons", '<span class="betterSwecShibeText">very doge buttons             wow</span>') +
+                                settingsCheckbox("ACP_dogeButtons", '<span class="Better_SweClockers_ShibeText">very doge buttons             wow</span>') +
                                 settingsCheckbox("ACP_smileys", "Länk till SweClockers smileyreferens") +
                                 settingsCheckbox("ACP_specialChars", "Knappar för specialtecken") +
                                 settingsCheckbox("ACP_usefulLinks", "Verktyg för användbara länkar") +
@@ -2540,7 +2600,8 @@ function insertOptionsForm() {
                                 settingsCheckbox("betterPaginationButtons", "Förbättrade bläddringsknappar i forumet") +
                                 settingsCheckbox("highlightUnreadPMs", "Framhäv olästa PM i inkorgen") +
                                 settingsCheckbox("addPMLinks", "PM-knappar i foruminlägg") +
-                                settingsCheckbox("quoteSignatureButtons", 'Citera signatur-knappar i foruminlägg')
+                                settingsCheckbox("quoteSignatureButtons", 'Citera signatur-knappar i foruminlägg') +
+                                settingsCheckbox("removePageLinkAnchors", "Ta bort <pre>#content</pre>-ankare i länkar till andra sidor i en artikel")
                             ) +
                             '<label for="Better_SweClockers_Settings.quoteSignatureTip">Text att infoga efter citat av signatur:</label>\
                             <textarea id="Better_SweClockers_Settings.quoteSignatureTip">'+BSC.settings.quoteSignatureTip+'</textarea>'
@@ -2551,7 +2612,7 @@ function insertOptionsForm() {
                                 settingsCheckbox("DOMOperationsDuringPageLoad", "Utför DOM-operationer under sidladdning") +
                                 settingsCheckbox("enableFilter", "Forumfilter för <strong>Nytt i forumet</strong>") +
                                 settingsCheckbox("preventAccidentalSignout", "Förhindra oavsiktlig utloggning") +
-                                settingsCheckbox("dogeInQuoteFix", 'Visa Doge-smiley i citat (istället för en Imgur-länk) <span class="betterSwecShibeText">         win</span>') +
+                                settingsCheckbox("dogeInQuoteFix", 'Visa Doge-smiley i citat (istället för en Imgur-länk) <span class="Better_SweClockers_ShibeText">         win</span>') +
                                 settingsCheckbox("searchWithGoogle", "Knapp för att söka med Google istället för standardsökfunktionen") +
                                 settingsCheckbox("openImagesInNewTab", "Öppna bilder i ny flik (istället för att förstora dem)")
                             ) +
@@ -2580,11 +2641,12 @@ function insertOptionsForm() {
                             <input type="button" class="button" value="Exportera" id="Better_SweClockers_Settings_Export" />\
                             <input type="button" class="button" value="Återställ" id="Better_SweClockers_Settings_Reset" />\
                             <div id="Better_SweClockers_Settings_ImportExportStatus"></div>\
-                            <div id="Better_SweClockers_Settings_ImportExportInfo"><p>Importerade inställningar sparas först när du klickar på <strong>Spara inställningar</strong>.</p><p>Om du klickar på <strong>Exportera</strong> exporteras de <em>ifyllda</em> inställningarna; inte de sparade.</p></div>'
+                            <div id="Better_SweClockers_Settings_ImportExportInfo"><p>Importerade inställningar sparas först när du klickar på <strong>OK</strong> eller <strong>Verkställ</strong>.</p><p>Om du klickar på <strong>Exportera</strong> exporteras de <em>ifyllda</em> inställningarna; inte de sparade.</p></div>'
                         ) +
-                        '<input type="submit" value="Spara inställningar" class="button" />' +
-                        '<a href="/profil/installningar" class="button">Avbryt</a>' +
-                        '<span id="Better_SweClockers_Settings_SuccessReport"></span>';
+                        '<input type="submit" value="OK" class="button" />' +
+                        '<input id="Better_SweClockers_Settings_Apply" type="button" value="Verkställ" class="button" />' +
+                        '<a href="' + referrer + '" class="button">Avbryt</a>' +
+                        '<div id="Better_SweClockers_Settings_SuccessReport"></div>';
         BSCSettingsFieldset.innerHTML = settingsHTML;
         BSCSettingsForm.appendChild(BSCSettingsFieldset);
         parentOfAllForms.empty();
@@ -2593,16 +2655,20 @@ function insertOptionsForm() {
         eventListener("Better_SweClockers_Settings_Import", "click", importSettings);
         eventListener("Better_SweClockers_Settings_Export", "click", exportSettings);
         eventListener("Better_SweClockers_Settings_Reset",  "click", askResetSettings);
+        eventListener("Better_SweClockers_Settings_Apply",  "click", function() {
+            try {
+                handleSaveRequest();
+            } catch(e) {
+                saveSettingsError(e);
+            }            
+        });
         eventListener("Better_SweClockers", "submit", function(event) {
             try {
                 event.preventDefault(event);
-                BSC.settings = parseOptionsForm();
-                saveSettings();
-                loadFavoriteLinks(parseFavoriteLinks(BSC.settings.favoriteLinksRaw));
-                alert("Inställningarna sparades.");
-                window.location.href = "/profil/installningar";
+                handleSaveRequest();
+                window.location.href = referrer;
             } catch(e) {
-                alert("Ett fel inträffade när inställningarna skulle sparas.\n\n"+e.message);
+                saveSettingsError(e);
             }
         });
     }
@@ -2659,9 +2725,9 @@ function importSettings() {
         var parsedSettings = tryToParseJSON(textarea.value);
         var statusField = byID("Better_SweClockers_Settings_ImportExportStatus");
         if (!!parsedSettings) {
-            if (confirm("Är du säker på att du vill importera dessa inställningar? Dina nuvarande inställningar kommer skrivas över om du klickar på Spara inställningar.")) {
+            if (confirm("Är du säker på att du vill importera dessa inställningar? Dina nuvarande inställningar kommer skrivas över om du klickar på <strong>OK</strong> eller <strong>Verkställ</strong>.")) {
                 updateSettingsForm(parsedSettings);
-                statusField.innerHTML = "Inställningarna importerades. Klicka på <strong><em>Spara inställningar</em><strong> för att spara.";
+                statusField.innerHTML = "Inställningarna importerades. Klicka på <strong>OK</strong> eller <strong>Verkställ</strong> för att spara.";
                 statusField.BSC_greenify();
             }
         } else {
@@ -2715,7 +2781,7 @@ function askResetSettings() {
 //================================================================
 
 function toggleShowFilterSettings() {
-    var settingsList = byID("betterSwecFilterSettingsList");
+    var settingsList = byID("Better_SweClockers_FilterSettingsList");
     var betterSwecFilterSettingsExpandLink = byID("Better_SweClockers_FilterSettingsExpandLink");
     if (!!settingsList) { 
         if (settingsList.style.display === "block") {
@@ -2777,7 +2843,7 @@ function setSelectAll(state) {
     }
 }
 
-function filterControls() {
+function enableFilterControls() {
     function inputBoxState(catID) {
         return BSC.settings.uninterestingForums[catID] ? " checked" : "";
     }
@@ -2803,7 +2869,7 @@ function filterControls() {
             var filterSettingsExpandLink = document.createElement("a");
             filterSettingsExpandLink.id = "Better_SweClockers_FilterSettingsExpandLink";
             filterSettingsExpandLink.href = "#";
-            filterSettingsExpandLink.classList.add("betterSwecLink");
+            filterSettingsExpandLink.classList.add("Better_SweClockers_Link");
             filterSettingsExpandLink.innerHTML = "+ Filterinställningar";
             var categoryName, currentItem, currentItemDataThread, currentItemDataThreadParsed, currentItemForumID, currentItemLink;
             for (var i = 0; i < listItems.length; i++) {
@@ -2827,7 +2893,7 @@ function filterControls() {
             }
             log("Forum filter applied. Inserting filter controls...");
             var filterSettingsWrapperHTML = '\
-            <ul title="Kryssa för de kategorier du vill filtrera bort" id="betterSwecFilterSettingsList">\
+            <ul title="Kryssa för de kategorier du vill filtrera bort" id="Better_SweClockers_FilterSettingsList">\
                 <li><input type="checkbox" id="Better_SweClockers_FilterSettingsToggleAll" /><label for="Better_SweClockers_FilterSettingsToggleAll">Markera alla</label></li>';
             var cat, catID, catIDPrefixed, catName;
             for (var c = 0, len = categoriesArray.length; c < len; c++) {
@@ -2843,12 +2909,12 @@ function filterControls() {
             plNyhetstips.appendChild(filterSettingsExpandLink);
             filterSettingsWrapper.BSC_insertAfter(plNyhetstips);
             eventListener("Better_SweClockers_FilterSettingsExpandLink", "click", function(event) { event.preventDefault(event); toggleShowFilterSettings(); });
-            var filterSettingsList = byID("betterSwecFilterSettingsList");
+            var filterSettingsList = byID("Better_SweClockers_FilterSettingsList");
             BSC.filterSettingsList = filterSettingsList;
             filterSettingsList.addEventListener("click", function(event) { filterSettingsClicked(event.target); }, false);
             setSelectAll(allCategoriesAreChecked());
-        } else addException("Could not add filter controls because #wdgtSideRecentThreads ul could not be found.");
-    } else addException("Could not add filter controls because #wdgtSideRecentThreads "+(!!plBody ? ".plNyhetstips" : ".plBody")+" could not be found.");
+        } else addException(new ElementNotFoundException("Could not add filter controls because #wdgtSideRecentThreads ul could not be found."));
+    } else addException(new ElementNotFoundException("Could not add filter controls because #wdgtSideRecentThreads "+(!!plBody ? ".plNyhetstips" : ".plBody")+" could not be found."));
 }
 
 function fixAdHeight() {
@@ -2948,7 +3014,7 @@ function prepare() {
             improvePaginationButtons();
         }
         if (optionIsTrue("enableFavoriteLinks")) {
-            fixTabWidthForFavoriteLinks();
+            makeRoomForFavoriteLinks();
         }
         updateStyleElement();
     } catch(e) {
@@ -2969,7 +3035,7 @@ function run() {
             }
         }
         if (settingsFormRequested()) {
-            log("Settings form requested.");
+            log("Settings form requested. Inserting it...");
             BSC.addDOMOperation(canInsertOptionsForm, insertOptionsForm);
         } else {
             log("Checking which DOM operations to run...");
@@ -3000,6 +3066,10 @@ function run() {
 
             if (optionIsTrue("preventAccidentalSignout")) {
                 BSC.addDOMOperation(canPreventAccidentalSignout, preventAccidentalSignout);
+            }
+
+            if (optionIsTrue("removePageLinkAnchors")) {
+                BSC.addDOMOperation(canRemovePageLinkAnchors, removePageLinkAnchors);
             }
 
             if (isInThread()) {
@@ -3075,9 +3145,9 @@ function finish(eventName) {
             autofocusPMSubject();
         }
 
-        if (optionIsTrue("enableFilter")) {
+        if (optionIsTrue("enableFilter") && !isOnBSCSettingsPage()) {
             // User wants to enable filter for "Nytt i forumet"
-            filterControls();
+            enableFilterControls();
         }
 
         if (isInThread()) {
@@ -3119,6 +3189,9 @@ function afterAds() {
 // We will not run BSC at all on HTTPS:
 if (!isOnHTTPS()) {
     prepare();
+} else {
+    fixAdHeight();
+    insertStyleElement();
 }
 
 // Public API (not accessible if BSC is sandboxed by the userscripts engine):
