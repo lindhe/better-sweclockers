@@ -2601,7 +2601,7 @@ function insertOptionsForm() {
                                 settingsCheckbox("highlightUnreadPMs", "Framhäv olästa PM i inkorgen") +
                                 settingsCheckbox("addPMLinks", "PM-knappar i foruminlägg") +
                                 settingsCheckbox("quoteSignatureButtons", 'Citera signatur-knappar i foruminlägg') +
-                                settingsCheckbox("removePageLinkAnchors", "Ta bort <pre>#content</pre>-ankare i länkar till andra sidor i en artikel")
+                                settingsCheckbox("removePageLinkAnchors", "Ta bort #content-ankare i länkar till andra sidor i en artikel")
                             ) +
                             '<label for="Better_SweClockers_Settings.quoteSignatureTip">Text att infoga efter citat av signatur:</label>\
                             <textarea id="Better_SweClockers_Settings.quoteSignatureTip">'+BSC.settings.quoteSignatureTip+'</textarea>'
@@ -3040,10 +3040,6 @@ function run() {
         } else {
             log("Checking which DOM operations to run...");
 
-            if (BSC.pseudoConsole) {
-                insertPseudoConsole();
-            }
-
             if (optionIsTrue("enableFavoriteLinks")) {
                 BSC.addDOMOperation(canInsertFavoriteLinks, insertFavoriteLinks);
             }
@@ -3108,6 +3104,9 @@ function finish(eventName) {
         log("Detected "+eventName+" event.");
         performDOMOperations();
         stopPerformingDOMOperations();
+        if (BSC.pseudoConsole) {
+            insertPseudoConsole();
+        }
         assignDOMVariables();
         TAFocusDetection();
         handleDarkThemeTimer();
