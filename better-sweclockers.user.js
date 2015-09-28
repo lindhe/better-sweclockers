@@ -3,7 +3,7 @@
 // @namespace       http://alling.se
 //
 //                  *** Don't forget to update version below as well! ***
-// @version         2.1
+// @version         2.2
 //                  *** Don't forget to update version below as well! ***
 //
 // @match           http://*.sweclockers.com/*
@@ -25,7 +25,7 @@ var Better_SweClockers = (function() {
 "use strict";
 
 // Needed for update check. Remember to update!
-var version = "2.1";
+var version = "2.2";
 
 // "Constants"
 var ABOVE_STANDARD_CONTROL_PANEL = 0;
@@ -90,8 +90,9 @@ var BSC = {
     greenTextColor: "#789922",
 
     shibeTextLineMaxLength: 100, // max line length of shibe text
-    bannerHeightTop: 121, // default height of top ad banner
+    bannerHeightTop:  121, // default height of top ad banner
     bannerHeightSide: 360, // default height of side ad banners
+    bannerHeightMid:  384, // default height of page ad modules
     favoriteLinksHeight: 32,
 
     myName: "", // user's username
@@ -142,7 +143,10 @@ var BSC = {
         "favoriteLinks":                        null,
         "favoriteLinksRaw":                     favoriteLinksRawDefault,
         "fixAdHeight":                          true,
+        "fixArticleImageHeight":                false,
+        "hideThumbnailCarousel":                false,
         "highlightUnreadPMs":                   true,
+        "highlightOwnPosts":                    true,
         "largerTextareaHeight":                 720,
         "openImagesInNewTab":                   false,
         "preventAccidentalSignout":             true,
@@ -1773,6 +1777,7 @@ function insertAdvancedControlPanel() {
         '<input value="color" id="Better_SweClockers_Button_Color" class="button" type="button" />' +
         '<input value="font" id="Better_SweClockers_Button_Font" class="button" type="button" />' +
         '<input value="quote" id="Better_SweClockers_Button_Quote" class="button" type="button" />' +
+        '<input value="spoiler" title="För spoilers, mycket långa textstycken etc" id="Better_SweClockers_Button_Spoiler" class="button" type="button" />' +
         '<input value="noparse" title="Förhindrar att BB-kod parsas" id="Better_SweClockers_Button_Noparse" class="button" type="button" />' +
         '<input value="strike" title="Överstruken text" id="Better_SweClockers_Button_Strike" class="button" type="button" />' +
         '<input value="cmd" title="Inlinekod" id="Better_SweClockers_Button_Cmd" class="button" type="button" />' +
@@ -1781,6 +1786,7 @@ function insertAdvancedControlPanel() {
         '<a title="Förbättrad version av den inbyggda länkfunktionen" id="Better_SweClockers_Button_URL" class="button Better_SweClockers_IconButton" href="#"><img src="'+BASE64.URL+'" class="Better_SweClockers_IconButtonIcon20px" />URL</a>' +
         '<a title="Gör inbäddade bilder av alla markerade, icke-tomma rader. Fungerar även mitt i en rad." id="Better_SweClockers_Button_IMG" class="button Better_SweClockers_IconButton" href="#"><img src="'+BASE64.IMG+'" class="Better_SweClockers_IconButtonIcon20px" />IMG</a>' +
         '<a title="Gör inbäddade, explicit klickbara bilder av alla markerade, icke-tomma rader. Fungerar även mitt i en rad." id="Better_SweClockers_Button_URLIMG" class="button Better_SweClockers_IconButton" href="#"><img src="'+BASE64.IMG+'" class="Better_SweClockers_IconButtonIcon20px" />URL IMG</a>' +
+        '<a title="Bädda in en YouTube-video med markerad text som URL" id="Better_SweClockers_Button_YouTube" class="button" href="#" /><span>You</span><span>Tube</span></a>' +
         '<a title="Länk till Google-sökning med markerad text som sökfras" id="Better_SweClockers_Button_Google" class="button" href="#" /><span>G</span><span>o</span><span>o</span><span>g</span><span>l</span><span>e</span></a>';
     // Doge buttons
     if (optionIsTrue("ACP_dogeButtons")) {
@@ -1886,6 +1892,8 @@ function insertAdvancedControlPanel() {
                 TA.BSC_wrapBB('[font=""]', '[/font]', 7); break;
             case "Better_SweClockers_Button_Quote":
                 TA.BSC_wrapBB('[quote=""]', '[/quote]', 8); break;
+            case "Better_SweClockers_Button_Spoiler":
+                TA.BSC_wrapBB("[spoiler]", "[/spoiler]"); break;
             case "Better_SweClockers_Button_URL":
                 TA.BSC_wrapBB('[url=""]', '[/url]', 6); break;
             case "Better_SweClockers_Button_IMG":
@@ -1895,13 +1903,15 @@ function insertAdvancedControlPanel() {
             case "Better_SweClockers_Button_Noparse":
                 TA.BSC_wrapBB("[noparse]", "[/noparse]"); break;
             case "Better_SweClockers_Button_Strike":
-                TA.BSC_wrapBB("[strike]", "[/strike]"); break;
+                TA.BSC_wrapBB("[s]", "[/s]"); break;
             case "Better_SweClockers_Button_Cmd":
-                TA.BSC_wrapBB('[cmd]', '[/cmd]'); break;
+                TA.BSC_wrapBB("[cmd]", "[/cmd]"); break;
             case "Better_SweClockers_Button_Code":
-                TA.BSC_wrapBB('[code]\n', '\n[/code]'); break;
+                TA.BSC_wrapBB("[code]\n", "\n[/code]"); break;
             case "Better_SweClockers_Button_Math":
                 TA.BSC_wrapBB('[font="serif"][size="3"]', '[/size][/font]'); break;
+            case "Better_SweClockers_Button_YouTube":
+                TA.BSC_wrapBB("[youtube]", "[/youtube]"); break;
             case "Better_SweClockers_Button_Google":
                 betterSwecGoogle(); break;
             case "Better_SweClockers_Button_Shibe":
@@ -2066,6 +2076,17 @@ function addPMLinks() {
         .forumPost .details { position: relative; }\
     ";
     log("Done inserting PM links.");
+}
+
+function highlightOwnPosts() {
+    log("Styling own posts...");
+    // Relies on posts having .isReader if they are user's own.
+    BSC.CSS += "\
+        .forumPost.isReader {\
+            box-shadow: -8px 0 0 #C15200;\
+        }\
+    ";
+    log("Done styling own posts.");
 }
 
 function getReplyURL() {
@@ -2289,6 +2310,16 @@ function addMainCSS() {
             z-index: 9;\
         }\
         #Better_SweClockers_ColorPaletteInner { display: none; height: 23px; margin-left: 3px; }\
+        #Better_SweClockers_Button_YouTube {\
+            color: black;\
+            font-family: "Arial Narrow", Arial;\
+        }\
+        #Better_SweClockers_Button_YouTube span:nth-child(2) {\
+            color: white;\
+            background-color: #E00;\
+            border-radius: 4px;\
+            padding: 1px 2px 0 2px;\
+        }\
         #Better_SweClockers_Button_Google {\
             font-family: Georgia, serif;\
             background: rgb(249,248,244);\
@@ -2298,7 +2329,6 @@ function addMainCSS() {
             background: -o-linear-gradient(top, rgba(249,248,244,1) 0%,rgba(229,228,224,1) 100%);\
             background: -ms-linear-gradient(top, rgba(249,248,244,1) 0%,rgba(229,228,224,1) 100%);\
             background: linear-gradient(to bottom, rgba(249,248,244,1) 0%,rgba(229,228,224,1) 100%);\
-            filter: progid:DXImageTransform.Microsoft.gradient( startColorstr=\'#f9f8f4\', endColorstr=\'#e5e4e0\',GradientType=0 );\
         }\
         #Better_SweClockers_Button_Google:hover {\
             background: rgb(252,251,247);\
@@ -2308,7 +2338,6 @@ function addMainCSS() {
             background: -o-linear-gradient(top, rgba(252,251,247,1) 0%,rgba(242,241,237,1) 100%);\
             background: -ms-linear-gradient(top, rgba(252,251,247,1) 0%,rgba(242,241,237,1) 100%);\
             background: linear-gradient(to bottom, rgba(252,251,247,1) 0%,rgba(242,241,237,1) 100%);\
-            filter: progid:DXImageTransform.Microsoft.gradient( startColorstr=\'#fcfbf7\', endColorstr=\'#f2f1ed\',GradientType=0 );\
         }\
         #Better_SweClockers_Button_Google span:nth-child(3n+1) { color: #176dee; }\
         #Better_SweClockers_Button_Google span:nth-child(4n+2) { color: #da4532; }\
@@ -2600,6 +2629,7 @@ function insertOptionsForm() {
                                 settingsCheckbox("betterPaginationButtons", "Förbättrade bläddringsknappar i forumet") +
                                 settingsCheckbox("highlightUnreadPMs", "Framhäv olästa PM i inkorgen") +
                                 settingsCheckbox("addPMLinks", "PM-knappar i foruminlägg") +
+                                settingsCheckbox("highlightOwnPosts", "Framhäv egna inlägg") +
                                 settingsCheckbox("quoteSignatureButtons", 'Citera signatur-knappar i foruminlägg') +
                                 settingsCheckbox("removePageLinkAnchors", "Ta bort #content-ankare i länkar till andra sidor i en artikel")
                             ) +
@@ -2609,7 +2639,9 @@ function insertOptionsForm() {
                         subFieldset("Diverse",
                             checkboxList(
                                 settingsCheckbox("fixAdHeight", "<strong>Lås höjden på reklam</strong>") +
+                                settingsCheckbox("fixArticleImageHeight", "Lås artikelbildens höjd") +
                                 settingsCheckbox("DOMOperationsDuringPageLoad", "Utför DOM-operationer under sidladdning") +
+                                settingsCheckbox("hideThumbnailCarousel", "Göm thumbnailvyn högst upp") +
                                 settingsCheckbox("enableFilter", "Forumfilter för <strong>Nytt i forumet</strong>") +
                                 settingsCheckbox("preventAccidentalSignout", "Förhindra oavsiktlig utloggning") +
                                 settingsCheckbox("dogeInQuoteFix", 'Visa Doge-smiley i citat (istället för en Imgur-länk) <span class="Better_SweClockers_ShibeText">         win</span>') +
@@ -2937,14 +2969,32 @@ function fixAdHeight() {
             overflow: hidden;\
             display: none;\
         }\
+        .adModule {\
+            height: "+BSC.bannerHeightMid+"px;\
+            overflow-y: hidden;\
+        }\
     ";
     log("Fixed banner heights.");
+}
+
+function fixArticleImageHeight() {
+    log("Fixing article image height...");
+    BSC.CSS += "\
+        .whiteHeader.articleHeader > .articleBBCode {\
+            min-height: 440px;\
+        }\
+    ";
+    log("Fixed article image height.");
 }
 
 function showSideBannersAgain() {
     // Restore the CSS that was temporarily set by fixAdHeight():
     BSC.addCSS(".pushListInternal { margin-bottom: 8px; }\
                 .ad.adInsider     { display: block; }");
+}
+
+function hideThumbnailCarousel() {
+    BSC.addCSS("#carousel { display: none; }");
 }
 
 function insertPseudoConsole() {
@@ -3002,6 +3052,9 @@ function prepare() {
         if (optionIsTrue("fixAdHeight")) {
             fixAdHeight();
         }
+        if (optionIsTrue("fixArticleImageHeight")) {
+            fixArticleImageHeight();
+        }
         handleDarkTheme();
         insertDarkThemeStyleElement();
         addMainCSS();
@@ -3015,6 +3068,9 @@ function prepare() {
         }
         if (optionIsTrue("enableFavoriteLinks")) {
             makeRoomForFavoriteLinks();
+        }
+        if (optionIsTrue("hideThumbnailCarousel")) {
+            hideThumbnailCarousel();
         }
         updateStyleElement();
     } catch(e) {
@@ -3154,6 +3210,10 @@ function finish(eventName) {
                 addPMLinks();
             }
 
+            if (optionIsTrue("highlightOwnPosts")) {
+                highlightOwnPosts();
+            }
+
             if (optionIsTrue("quoteSignatureButtons")) {
                 addQuoteSignatureButtons();
             }
@@ -3189,6 +3249,7 @@ function afterAds() {
 if (!isOnHTTPS()) {
     prepare();
 } else {
+    // Except for fixAdHeight(), which is too important to skip:
     fixAdHeight();
     insertStyleElement();
 }
