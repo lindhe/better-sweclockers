@@ -8,6 +8,7 @@
 //
 // @match           http://*.sweclockers.com/*
 // @match           https://*.sweclockers.com/*
+// @exclude         *cdn.sweclockers.com/*
 // @description     Provides extra functionality to the SweClockers website and increases usability enormously by locking the height of the ads.
 // @run-at          document-start
 // ==/UserScript==
@@ -1807,6 +1808,7 @@ function insertAdvancedControlPanel() {
                    ACPButton("\u2011", "Hårt bindestreck (tillåter ej radbrytning)") +
                    ACPButton("–", "Kort tankstreck (talstreck; intervall)") +
                    ACPButton("—", "Långt tankstreck") +
+                   ACPButton("…", "Ellipsis") +
                    ACPButton("≈", "Ungefär lika med") +
                    ACPButton("− ", "Minustecken") +
                    ACPButton("×", "Multiplikationstecken") +
